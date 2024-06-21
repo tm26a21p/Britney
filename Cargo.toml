@@ -1,0 +1,12 @@
+[package]
+name = "britney"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+dotenv = "0.15.0"
+octocrab = "0.10.0"
+ollama-rs = "0.2.0"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1.15", features = ["full"] }
