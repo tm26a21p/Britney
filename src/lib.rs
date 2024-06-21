@@ -130,7 +130,7 @@ use ollama_rs::{
     generation::chat::{
         request::ChatMessageRequest, ChatMessage, ChatMessageResponseStream,
     },
-    models::LocalModel,
+    models::{create::CreateModelRequest, LocalModel},
     Ollama,
 };
 use tokio::{
@@ -161,12 +161,12 @@ impl Britney
         }
     }
 
-    fn is_britney_alive(
+    fn alive(
         &self,
-        _models: Vec<LocalModel>,
+        models: &Vec<LocalModel>,
     ) -> bool
     {
-        for model in _models {
+        for model in models {
             if model.name == "britney" {
                 return true;
             }
@@ -174,17 +174,74 @@ impl Britney
         false
     }
 
+    pub async fn spawn(
+        &self,
+        default: String,
+    ) -> ()
+    {
+        let model = self.desired_model.clone().unwrap_or(default);
+
+        let mut res = self
+            .ollama
+            .create_model_stream(CreateModelRequest::path(
+                model,
+                "./Modelfile".into(),
+            ))
+            .await
+            .unwrap();
+
+        while let Some(res) = res.next().await {
+            let res = res.unwrap();
+            println!("{:?}", res);
+        }
+    }
+
+    async fn create_modelfile(
+        &self,
+        model: &str,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        // execute this command : ollama show --modelfile model > Modelfile
+        let output = Command::new("ollama")
+            .arg("show")
+            .arg("--modelfile")
+            .arg(format!("{}", model))
+            .output()
+            .await?;
+        let mut file = tokio::fs::File::create("./Modelfile").await?;
+        println!("content of Modelfile {:?}", output.stdout);
+        file.write_all(&output.stdout).await?;
+        Ok(())
+    }
+
     pub async fn check(&self) -> Result<(), Box<dyn std::error::Error>>
     {
-        println!("Checking...");
+        println!("Running a check check...");
         let models = self.ollama.list_local_models().await.unwrap();
         if models.len() == 0 {
             Err("No models found. run `ollama run [model_name]` in a \
                  terminal to download a model.")?;
         }
-        // check if Britney is in the models list
-        let is_briney_alive = self.is_britney_alive(models);
-        let modelfile = std::path::Path::new("./Modelfile");
+        if self.alive(&models) {
+            println!("Britney is alive! She's gonna get so mad...");
+            return Ok(());
+        }
+        if self.desired_model.is_none() {
+            let fmodel = models[0].clone();
+            println!(
+                "No model specified detected. Using the first from the list: \
+                 {}",
+                fmodel.name
+            );
+            println!("Is there any Modelfile?");
+            let modelfile = std::path::Path::new("./Modelfile");
+            if !modelfile.exists() {
+                println!("No Modelfile found. Creating one...");
+                self.create_modelfile(&fmodel.name).await?;
+            }
+            println!("All good. Spawning Britney.");
+            self.spawn(fmodel.name).await;
+        }
 
         Ok(())
     }
