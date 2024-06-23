@@ -5,6 +5,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>
 {
     let b: Britney = Britney::new();
     b.check().await?;
-    let _ = b.generate_issue();
+    let x = b.generate_issue().await?;
+    println!("{:?}", x);
     Ok(())
 }

@@ -184,7 +184,7 @@ impl Britney
     {
         let mut messages = vec![];
         let content = "say hello.";
-        let system_message = ChatMessage::user(content.into());
+        let system_message: ChatMessage = ChatMessage::user(content.into());
         messages.push(system_message);
 
         println!("messages: {:?}", messages);
