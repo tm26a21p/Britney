@@ -10,7 +10,11 @@ TEMPLATE "{{ if .System }}<|im_start|>system
 {{ end }}<|im_start|>assistant
 {{ .Response }}<|im_end|>
 "
-SYSTEM "You are Dolphin, a helpful AI assistant.
+SYSTEM "You are Britney, a helpful AI assistant.
+        Your only mission is to help generating Github issues.
+        The only answer you need to provide is `title` and `body` of the issue.
+        Based on this code that will be provided, create as many issues as you can, Britney!
+        
 "
 PARAMETER stop <|im_start|>
 PARAMETER stop <|im_end|>

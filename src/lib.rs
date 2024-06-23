@@ -1,5 +1,9 @@
+use std::io::{stdout, Write};
+
 use dotenv::dotenv;
 use octocrab::Octocrab;
+use tokio::io::AsyncWriteExt;
+use tokio_stream::StreamExt;
 
 #[derive(Debug)]
 pub struct GithubClient
@@ -15,11 +19,13 @@ impl GithubClient
     {
         dotenv().ok();
         let owner =
-            std::env::var("GITHUB_OWNER").expect("GITHUB_OWNER not found.");
-        let repo =
-            std::env::var("GITHUB_REPO").expect("GITHUB_REPO not found.");
-        let github_token =
-            std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not found.");
+            std::env::var("GITHUB_OWNER").unwrap_or("test".to_string());
+        let repo = std::env::var("GITHUB_REPO").unwrap_or("test".to_string());
+        let github_token = std::env::var("GITHUB_TOKEN").expect(
+            "GITHUB_TOKEN not found. You need one to use the Github API.
+            Create a .env file in the root of the project and add \
+             GITHUB_TOKEN=your_token_here",
+        );
         let octocrab = Octocrab::builder()
             .personal_token(github_token)
             .build()
@@ -133,11 +139,8 @@ use ollama_rs::{
     models::{create::CreateModelRequest, LocalModel},
     Ollama,
 };
-use tokio::{
-    io::{stdout, AsyncWriteExt},
-    process::Command,
-};
-use tokio_stream::StreamExt;
+use tokio::{io::AsyncReadExt, process::Command};
+// use tokio_stream::StreamExt;
 
 #[derive(Debug)]
 pub struct Britney
@@ -167,25 +170,34 @@ impl Britney
     ) -> bool
     {
         for model in models {
-            if model.name == "britney" {
+            // println!("Model: {:?}", model);
+            if model.name.contains("Britney") {
                 return true;
             }
         }
         false
     }
 
-    pub async fn spawn(
+    async fn _open_and_read_file(
         &self,
-        default: String,
-    ) -> ()
+        file_path: &str,
+    ) -> Result<String, Box<dyn std::error::Error>>
     {
-        let model = self.desired_model.clone().unwrap_or(default);
+        let mut file = tokio::fs::File::open(file_path).await?;
+        let mut contents: String = String::new();
+        file.read_to_string(&mut contents).await?;
+        Ok(contents)
+    }
 
+    pub async fn spawn(&self)
+    {
+        let modelfile_path = std::env::var("MODELFILE_PATH")
+            .unwrap_or("./Modelfile".to_owned());
         let mut res = self
             .ollama
             .create_model_stream(CreateModelRequest::path(
-                model,
-                "./Modelfile".into(),
+                "Britney".into(),
+                modelfile_path.to_string(),
             ))
             .await
             .unwrap();
@@ -196,58 +208,152 @@ impl Britney
         }
     }
 
+    pub fn system(
+        &self,
+        d: &str,
+    ) -> String
+    {
+        format!("SYSTEM \"{}\n\"", d)
+    }
+
+    async fn opiniated_system_content(&self) -> String
+    {
+        format!(
+            "You are Britney.
+        Your only mission is to help generating Github issues.
+        The only answer you need to provide is `title` and `body` of the \
+             issue.
+        Based on this code that will be provided, create as many issues as \
+             you can, Britney!
+        ",
+        )
+    }
+
+    async fn followup_code(&self)
+        -> Result<String, Box<dyn std::error::Error>>
+    {
+        let main = self._open_and_read_file("src/main.rs").await?;
+        let lib = self._open_and_read_file("src/lib.rs").await?;
+        Ok(format!("```rust\n{}\n{}\n```", main, lib))
+    }
+
     async fn create_modelfile(
         &self,
         model: &str,
     ) -> Result<(), Box<dyn std::error::Error>>
     {
-        // execute this command : ollama show --modelfile model > Modelfile
+        // Execute this command: ollama show --modelfile model > Modelfile
         let output = Command::new("ollama")
             .arg("show")
             .arg("--modelfile")
-            .arg(format!("{}", model))
+            .arg(model)
             .output()
             .await?;
+
+        // Read the contents of the output
+        let mut contents = String::from_utf8(output.stdout)?;
+        // let a = self.system("You are Britney, a helpful AI assistant.");
+        contents = contents.replace(
+            "You are Dolphin, a helpful AI assistant.",
+            self.opiniated_system_content().await.as_str(),
+        );
+        // Write the modified contents to the file
         let mut file = tokio::fs::File::create("./Modelfile").await?;
-        println!("content of Modelfile {:?}", output.stdout);
-        file.write_all(&output.stdout).await?;
+        file.write_all(contents.as_bytes()).await?;
         Ok(())
+    }
+
+    async fn check_modelfile(
+        &self,
+        choice: String,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        println!("Is there any Modelfile? We need one to run Britney.");
+        let modelfile = std::path::Path::new("Modelfile");
+        if !modelfile.exists() {
+            println!("No Modelfile found. Creating one based on {}", choice);
+            self.create_modelfile(&choice).await?;
+        }
+        Ok(())
+    }
+
+    fn model_choice(
+        &self,
+        models: &Vec<LocalModel>,
+    ) -> String
+    {
+        let mut choice = models[0].name.to_owned();
+
+        if self.desired_model.is_none() {
+            println!(
+                "No model specified. Using the first from the list: {}",
+                choice
+            );
+        } else {
+            choice = self.desired_model.to_owned().unwrap();
+        }
+        choice
     }
 
     pub async fn check(&self) -> Result<(), Box<dyn std::error::Error>>
     {
-        println!("Running a check check...");
+        println!("Running a check...");
         let models = self.ollama.list_local_models().await.unwrap();
-        if models.len() == 0 {
-            Err("No models found. run `ollama run [model_name]` in a \
-                 terminal to download a model.")?;
+        if models.is_empty() {
+            return Err("No models found. Run `ollama run [model_name]` in \
+                        a terminal to download a model."
+                .into());
         }
+
+        // println!("Available models: {:?}", models);
         if self.alive(&models) {
             println!("Britney is alive! She's gonna get so mad...");
             return Ok(());
         }
-        if self.desired_model.is_none() {
-            let fmodel = models[0].clone();
-            println!(
-                "No model specified detected. Using the first from the list: \
-                 {}",
-                fmodel.name
-            );
-            println!("Is there any Modelfile?");
-            let modelfile = std::path::Path::new("./Modelfile");
-            if !modelfile.exists() {
-                println!("No Modelfile found. Creating one...");
-                self.create_modelfile(&fmodel.name).await?;
-            }
-            println!("All good. Spawning Britney.");
-            self.spawn(fmodel.name).await;
-        }
+
+        println!("Britney is not alive. Let's fix that.");
+        let model_choice = self.model_choice(&models);
+        _ = self.check_modelfile(model_choice.clone()).await;
+        self.spawn().await;
 
         Ok(())
     }
 
-    pub async fn generate_ai_content(&self) -> Vec<(String, String)>
+    pub async fn answer(
+        &self,
+        q: &str,
+    ) -> Result<String, Box<dyn std::error::Error>>
     {
-        unimplemented!()
+        let mut messages = vec![];
+        let system_message =
+            ChatMessage::user(self.followup_code().await.unwrap());
+        messages.push(system_message);
+        let user_message = ChatMessage::user(q.to_string());
+        messages.push(user_message);
+
+        println!("messages: {:?}", messages);
+        let mut stream: ChatMessageResponseStream = self
+            .ollama
+            .send_chat_messages_stream(ChatMessageRequest::new(
+                "Britney".to_string(),
+                messages.to_owned(),
+            ))
+            .await?;
+        let mut stdout = stdout();
+        let mut response = String::new();
+        while let Some(Ok(res)) = stream.next().await {
+            if let Some(assistant_message) = res.message {
+                _ = stdout.write_all(assistant_message.content.as_bytes());
+                _ = stdout.flush();
+                response += assistant_message.content.as_str();
+            }
+        }
+        println!("response: {}", response);
+        Ok(response)
+    }
+
+    pub async fn generate_issues(&self) -> Vec<(String, String)>
+    {
+        vec![]
     }
 }

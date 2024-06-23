@@ -1,18 +1,15 @@
 use britney::*;
 
 #[tokio::main]
-async fn main() -> octocrab::Result<()>
+async fn main() -> Result<(), Box<dyn std::error::Error>>
 {
-    let client = GithubClient::new();
-
-    let template =
-        IssueTemplate::new("Template Title: {title}", "Template Body: {body}");
-
-    // let ai_data = generate_ai_content();
-
-    client
-        .create_issues_from_template(template, ai_data)
+    let b: Britney = Britney::new();
+    b.check().await?;
+    let _ = b
+        .answer(
+            "Generate 1 good issue with examples based on the code given in \
+             my previous message.",
+        )
         .await?;
-
     Ok(())
 }
