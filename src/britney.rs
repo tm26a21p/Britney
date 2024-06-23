@@ -88,6 +88,40 @@ impl Britney
              and body).
              Always take in consideration the code provided previously by the \
              user.
+             Use this template to create the issues by replacing the comments \
+             by actual content:
+             ### Feature Request
+
+#### Summary
+
+<!-- Provide a brief summary of the feature request -->
+
+#### Motivation
+
+<!-- Explain why this feature is needed and how it will benefit users -->
+
+#### Detailed Description
+
+<!-- Provide a detailed description of the feature, including any specific \
+             requirements -->
+
+#### Potential Solutions
+
+<!-- Describe any potential solutions or approaches for implementing the \
+             feature -->
+
+#### Additional Context
+
+<!-- Add any other context or screenshots about the feature request here -->
+
+#### Alternatives Considered
+
+<!-- Mention any alternatives you've considered and why they weren't suitable \
+             -->
+
+#### Related Issues
+
+<!-- Reference any related issues or previous discussions -->
         ",
         )
     }
@@ -96,8 +130,7 @@ impl Britney
         &self
     ) -> Result<String, Box<dyn std::error::Error>>
     {
-        let main = self._open_and_read_file("src/issue.rs").await?;
-        Ok(format!("{}", main))
+        Ok(self._open_and_read_file("src/github_client.rs").await?)
     }
 
     async fn create_modelfile(
@@ -183,11 +216,14 @@ impl Britney
     ) -> Result<String, Box<dyn std::error::Error>>
     {
         let mut messages = vec![];
-        let content = "say hello.";
-        let system_message: ChatMessage = ChatMessage::user(content.into());
+        let content = format!("Code: {}", self._followup_code().await?);
+        let system_message: ChatMessage = ChatMessage::system(content.into());
+        let user_message: ChatMessage = ChatMessage::user(
+            "Create 1 complete issue about the code above.".into(),
+        );
         messages.push(system_message);
+        messages.push(user_message);
 
-        println!("messages: {:?}", messages);
         let mut stream: ChatMessageResponseStream = self
             .ollama
             .send_chat_messages_stream(ChatMessageRequest::new(
@@ -204,12 +240,6 @@ impl Britney
                 response += assistant_message.content.as_str();
             }
         }
-        println!("response: {}", response);
         Ok(response)
-    }
-
-    pub async fn generate_issues(&self) -> Vec<(String, String)>
-    {
-        vec![]
     }
 }
