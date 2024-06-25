@@ -1,22 +1,35 @@
+use std::fs;
+
 use crate::github_client::Issue;
 
 #[derive(Debug, Clone)]
 pub struct IssueTemplate
 {
-    pub title_template: String,
-    pub body_template: String,
+    pub raw: String,
+    title_template: String,
+    body_template: String,
 }
 
 impl IssueTemplate
 {
-    pub fn new(
-        title_template: &str,
-        body_template: &str,
-    ) -> Self
+    // Load the template from the given path
+    pub fn new(path: &str) -> Self
     {
+        let content = fs::read_to_string(path).expect("Unable to read file");
+
+        let mut title_template = String::new();
+        let mut body_template = String::new();
+
+        // Simple parsing logic assuming title and body are separated by "---"
+        if let Some((title, body)) = content.split_once("---") {
+            title_template = title.trim().to_string();
+            body_template = body.trim().to_string();
+        }
+
         Self {
-            title_template: title_template.to_string(),
-            body_template: body_template.to_string(),
+            raw: content,
+            title_template,
+            body_template,
         }
     }
 
