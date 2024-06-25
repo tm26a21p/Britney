@@ -1,9 +1,9 @@
-use std::io::{stdout, Write};
-
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    process::Command,
+use std::{
+    fs,
+    io::{stdout, Write},
 };
+
+use tokio::{io::AsyncWriteExt, process::Command};
 use tokio_stream::StreamExt;
 use ollama_rs::{
     generation::chat::{
@@ -13,14 +13,15 @@ use ollama_rs::{
     Ollama,
 };
 
-use crate::github_client::GithubClient;
+use crate::{github_client::GithubClient, issue::IssueTemplate};
 
 #[derive(Debug)]
 pub struct Britney
 {
     pub client: GithubClient,
-    pub ollama: Ollama,
+    ollama: Ollama,
     desired_model: Option<String>,
+    it: IssueTemplate,
 }
 
 impl Britney
@@ -30,10 +31,13 @@ impl Britney
         let client = GithubClient::new();
         let ollama = Ollama::default();
         let desired_model = std::env::var("OLLAMA_MODEL").ok();
+        let default_template =
+            IssueTemplate::new("Issue_templates/default.md");
         Self {
             client,
             ollama,
             desired_model,
+            it: default_template,
         }
     }
 
@@ -48,17 +52,6 @@ impl Britney
             }
         }
         false
-    }
-
-    async fn _open_and_read_file(
-        &self,
-        file_path: &str,
-    ) -> Result<String, Box<dyn std::error::Error>>
-    {
-        let mut file = tokio::fs::File::open(file_path).await?;
-        let mut contents: String = String::new();
-        file.read_to_string(&mut contents).await?;
-        Ok(contents)
     }
 
     pub async fn spawn(&self)
@@ -80,57 +73,20 @@ impl Britney
         }
     }
 
-    async fn opiniated_system_content(&self) -> String
+    async fn opiniated_system_content(
+        &self,
+        template: String,
+    ) -> String
     {
         format!(
-            "You are Britney, a Github Issue content generator.
-        Your only mission is to generate professional Github issues (title \
-             and body).
-             Always take in consideration the code provided previously by the \
-             user.
-             Use this template to create the issues by replacing the comments \
-             by actual content:
-             ### Feature Request
+            "You are a helpful assistant that generates GitHub issues. \
+             Create 1  complete GitHub issue, 100% based on the following \
+             template. Use the following format for each issue:
 
-#### Summary
+                {template}
 
-<!-- Provide a brief summary of the feature request -->
-
-#### Motivation
-
-<!-- Explain why this feature is needed and how it will benefit users -->
-
-#### Detailed Description
-
-<!-- Provide a detailed description of the feature, including any specific \
-             requirements -->
-
-#### Potential Solutions
-
-<!-- Describe any potential solutions or approaches for implementing the \
-             feature -->
-
-#### Additional Context
-
-<!-- Add any other context or screenshots about the feature request here -->
-
-#### Alternatives Considered
-
-<!-- Mention any alternatives you've considered and why they weren't suitable \
-             -->
-
-#### Related Issues
-
-<!-- Reference any related issues or previous discussions -->
-        ",
+            Adjust the template as needed for each type of issue. ",
         )
-    }
-
-    async fn _followup_code(
-        &self
-    ) -> Result<String, Box<dyn std::error::Error>>
-    {
-        Ok(self._open_and_read_file("src/github_client.rs").await?)
     }
 
     async fn create_modelfile(
@@ -147,9 +103,10 @@ impl Britney
             .await?;
 
         let mut contents = String::from_utf8(output.stdout)?;
+        let template = self.it.raw.to_owned();
         contents = contents.replace(
             "You are Dolphin, a helpful AI assistant.",
-            self.opiniated_system_content().await.as_str(),
+            self.opiniated_system_content(template).await.as_str(),
         );
         let mut file = tokio::fs::File::create("./Modelfile").await?;
         file.write_all(contents.as_bytes()).await?;
@@ -212,11 +169,13 @@ impl Britney
     }
 
     pub async fn generate_issue(
-        &self
+        &self,
+        path: &str,
     ) -> Result<String, Box<dyn std::error::Error>>
     {
         let mut messages = vec![];
-        let content = format!("Code: {}", self._followup_code().await?);
+        let code = fs::read_to_string(path).expect("Unable to read file");
+        let content = format!("Code: {}", code);
         let system_message: ChatMessage = ChatMessage::system(content.into());
         let user_message: ChatMessage = ChatMessage::user(
             "Create 1 complete issue about the code above.".into(),
