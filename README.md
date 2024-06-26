@@ -20,10 +20,10 @@ Ensure you have the following installed:
 ### Installation
 
 1. **Clone the repository**:
-   ```sh
-   git clone https://github.com/yourusername/Britney.git
-   cd Britney
-    ```
+```sh
+git clone https://github.com/tm26a21/Britney.git
+cd Britney
+ ```
 
 2. Set up environment variables:
 Create a .env file in the root directory and add your GitHub token and other configuration settings:
