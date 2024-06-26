@@ -1,4 +1,4 @@
-# Britney - GitHub Issues Bulk Creator
+# Britney - Bulk GitHub Issues Creator
 
 Britney is a powerful tool designed to streamline the process of creating multiple GitHub issues. Leveraging AI and customizable templates, Britney allows you to generate bulk issues efficiently, saving time and effort.
 
