@@ -14,7 +14,9 @@ use ollama_rs::{
     Ollama,
 };
 
-use crate::{github_client::GithubClient, issue::IssueTemplate};
+use crate::{
+    github_client::GithubClient, issue::Issue, issue_template::IssueTemplate,
+};
 
 #[derive(Debug)]
 pub struct Britney
@@ -32,11 +34,9 @@ impl Britney
         let client = GithubClient::new();
         let ollama = Ollama::default();
         let desired_model = std::env::var("OLLAMA_MODEL").ok();
-        let mut template = IssueTemplate::new("src/issue.rs");
+        let path = template_path.unwrap_or("issue_templates/default.md");
+        let template = IssueTemplate::new(path);
 
-        if let Some(path) = template_path {
-            template = IssueTemplate::new(&path);
-        }
         Self {
             client,
             ollama,
@@ -188,10 +188,35 @@ impl Britney
         messages.push(message);
     }
 
-    pub async fn generate_issue(
+    fn parse_response(
+        &self,
+        response: String,
+    ) -> Issue
+    {
+        let mut title = String::new();
+        let mut body = String::new();
+        let mut is_title = true;
+
+        for line in response.lines() {
+            if line.is_empty() {
+                continue;
+            }
+
+            if is_title {
+                title = line.to_string();
+                is_title = false;
+            } else {
+                body += line;
+            }
+        }
+
+        Issue { title, body }
+    }
+
+    pub async fn generate_issue_from_file(
         &self,
         path: &str,
-    ) -> Result<String, Box<dyn std::error::Error>>
+    ) -> Result<Issue, Box<dyn std::error::Error>>
     {
         let mut messages = vec![];
 
@@ -218,6 +243,6 @@ impl Britney
                 response += assistant_message.content.as_str();
             }
         }
-        Ok(response)
+        Ok(self.parse_response(response))
     }
 }
