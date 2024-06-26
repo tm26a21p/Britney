@@ -27,18 +27,21 @@ pub struct Britney
 
 impl Britney
 {
-    pub fn new() -> Self
+    pub fn new(template_path: Option<&str>) -> Self
     {
         let client = GithubClient::new();
         let ollama = Ollama::default();
         let desired_model = std::env::var("OLLAMA_MODEL").ok();
-        let default_template =
-            IssueTemplate::new("Issue_templates/default.md");
+        let mut template = IssueTemplate::new("src/issue.rs");
+
+        if let Some(path) = template_path {
+            template = IssueTemplate::new(&path);
+        }
         Self {
             client,
             ollama,
             desired_model,
-            it: default_template,
+            it: template,
         }
     }
 
