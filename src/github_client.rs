@@ -37,21 +37,30 @@ impl GithubClient
         }
     }
 
+    pub async fn create_issue(
+        &self,
+        issue: Issue,
+    ) -> octocrab::Result<()>
+    {
+        let issue = self
+            .octocrab
+            .issues(&self.owner, &self.repo)
+            .create(issue.title)
+            .body(issue.body)
+            .send()
+            .await?;
+
+        println!("Created issue: {:?}", issue.title);
+        Ok(())
+    }
+
     pub async fn create_issues(
         &self,
         issues: Vec<Issue>,
     ) -> octocrab::Result<()>
     {
         for issue in issues {
-            let issue = self
-                .octocrab
-                .issues(&self.owner, &self.repo)
-                .create(issue.title)
-                .body(issue.body)
-                .send()
-                .await?;
-
-            println!("Created issue: {:?}", issue);
+            self.create_issue(issue).await?;
         }
         Ok(())
     }
@@ -64,16 +73,7 @@ impl GithubClient
     {
         for (title_data, body_data) in ai_data {
             let issue = template.generate_issue(&title_data, &body_data);
-
-            let created_issue = self
-                .octocrab
-                .issues(&self.owner, &self.repo)
-                .create(&issue.title)
-                .body(&issue.body)
-                .send()
-                .await?;
-
-            println!("Created issue: {:?}", created_issue);
+            self.create_issue(issue).await?;
         }
         Ok(())
     }
@@ -96,8 +96,11 @@ impl Issue
         }
     }
 
-    pub fn from_template(_issue_template: IssueTemplate) -> Self
+    pub fn from_template(issue_template: IssueTemplate) -> Self
     {
-        unimplemented!()
+        Self {
+            title: issue_template.title_template.to_owned(),
+            body: String::new(),
+        }
     }
 }
