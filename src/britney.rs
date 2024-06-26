@@ -8,6 +8,7 @@ use tokio_stream::StreamExt;
 use ollama_rs::{
     generation::chat::{
         request::ChatMessageRequest, ChatMessage, ChatMessageResponseStream,
+        MessageRole,
     },
     models::{create::CreateModelRequest, LocalModel},
     Ollama,
@@ -73,19 +74,20 @@ impl Britney
         }
     }
 
-    async fn opiniated_system_content(
+    async fn behavior(
         &self,
         template: String,
     ) -> String
     {
         format!(
-            "You are a helpful assistant that generates GitHub issues. \
-             Create 1  complete GitHub issue, 100% based on the following \
-             template. Use the following format for each issue:
+            "You are Britney, a helpful assistant that generates GitHub \
+             issues. Create 1 professional complete GitHub Issue, 100% based \
+             on the following template:
 
                 {template}
 
-            Adjust the template as needed for each type of issue. ",
+            Adjust the template as needed for each issue. 
+            ",
         )
     }
 
@@ -106,7 +108,7 @@ impl Britney
         let template = self.it.raw.to_owned();
         contents = contents.replace(
             "You are Dolphin, a helpful AI assistant.",
-            self.opiniated_system_content(template).await.as_str(),
+            self.behavior(template).await.as_str(),
         );
         let mut file = tokio::fs::File::create("./Modelfile").await?;
         file.write_all(contents.as_bytes()).await?;
@@ -168,20 +170,35 @@ impl Britney
         Ok(())
     }
 
+    fn add_message(
+        &self,
+        messages: &mut Vec<ChatMessage>,
+        content: String,
+        role: MessageRole,
+    )
+    {
+        let message: ChatMessage = match role {
+            MessageRole::User => ChatMessage::user(content.into()),
+            MessageRole::System => ChatMessage::system(content.into()),
+            MessageRole::Assistant => ChatMessage::assistant(content.into()),
+        };
+        messages.push(message);
+    }
+
     pub async fn generate_issue(
         &self,
         path: &str,
     ) -> Result<String, Box<dyn std::error::Error>>
     {
         let mut messages = vec![];
+
         let code = fs::read_to_string(path).expect("Unable to read file");
+        let content = self.behavior(self.it.raw.to_owned()).await;
+        self.add_message(&mut messages, content, MessageRole::System);
         let content = format!("Code: {}", code);
-        let system_message: ChatMessage = ChatMessage::system(content.into());
-        let user_message: ChatMessage = ChatMessage::user(
-            "Create 1 complete issue about the code above.".into(),
-        );
-        messages.push(system_message);
-        messages.push(user_message);
+        self.add_message(&mut messages, content, MessageRole::System);
+        let content = "Create 1 complete issue about the code above.".into();
+        self.add_message(&mut messages, content, MessageRole::User);
 
         let mut stream: ChatMessageResponseStream = self
             .ollama
@@ -195,7 +212,6 @@ impl Britney
         while let Some(Ok(res)) = stream.next().await {
             if let Some(assistant_message) = res.message {
                 _ = stdout.write_all(assistant_message.content.as_bytes());
-                // _ = stdout.flush();
                 response += assistant_message.content.as_str();
             }
         }
