@@ -1,11 +1,12 @@
-use britney::britney::*;
+use britney::{britney::*, issue::*};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>
 {
-    let b: Britney = Britney::new();
+    let b: Britney = Britney::new(Some("issue_templates/default.md"));
     b.check().await?;
     let code_path = "src/issue.rs";
-    let _ = b.generate_issue(code_path).await?;
+    let issue: Issue = b.generate_issue_from_file(code_path).await?;
+    println!("{:?}", issue);
     Ok(())
 }
