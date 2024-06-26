@@ -7,7 +7,6 @@ Britney is a powerful tool designed to streamline the process of creating multip
 - **Bulk Issue Creation**: Generate multiple issues at once using predefined templates.
 - **AI Integration**: Utilize AI to customize issue content dynamically.
 - **Customizable Templates**: Define your own templates for issue titles and bodies.
-- **Environment Configuration**: Use `.env` files to manage your configuration settings securely.
 
 ## Getting Started
 
