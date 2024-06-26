@@ -71,9 +71,11 @@ impl Britney
             .await
             .unwrap();
 
+        let mut stdout = stdout();
         while let Some(res) = res.next().await {
             let res = res.unwrap();
-            println!("{:?}", res);
+            _ = stdout.write_all(res.message.as_bytes());
+            // stdout.flush().unwrap();
         }
     }
 
@@ -83,13 +85,14 @@ impl Britney
     ) -> String
     {
         format!(
-            "You are Britney, a helpful assistant that generates GitHub \
-             issues. Create 1 professional complete GitHub Issue, 100% based \
-             on the following template:
+            "You are Britney, a Github Issues generator. 
+            You create some professional and complete GitHub Issue, 100% \
+             based on the following template:
 
                 {template}
 
             Adjust the template as needed for each issue. 
+            Your answer is only the issue asked.
             ",
         )
     }
@@ -223,9 +226,11 @@ impl Britney
         let code = fs::read_to_string(path).expect("Unable to read file");
         let content = self.behavior(self.it.raw.to_owned()).await;
         self.add_message(&mut messages, content, MessageRole::System);
-        let content = format!("Code: {}", code);
+        let content = format!("{}: {}", path, code);
         self.add_message(&mut messages, content, MessageRole::System);
-        let content = "Create 1 complete issue about the code above.".into();
+        let content = "Produce a professional Github Issue based on the code \
+                       provided."
+            .into();
         self.add_message(&mut messages, content, MessageRole::User);
 
         let mut stream: ChatMessageResponseStream = self
@@ -244,5 +249,14 @@ impl Britney
             }
         }
         Ok(self.parse_response(response))
+    }
+
+    pub async fn post_issue(
+        &self,
+        issue: Issue,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        self.client.create_issue(issue).await?;
+        Ok(())
     }
 }
