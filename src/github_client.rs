@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use octocrab::Octocrab;
 
-use crate::issue::IssueTemplate;
+use crate::{issue::Issue, issue_template::IssueTemplate};
 // use tokio::io::AsyncWriteExt;
 // use tokio_stream::StreamExt;
 
@@ -76,31 +76,5 @@ impl GithubClient
             self.create_issue(issue).await?;
         }
         Ok(())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Issue
-{
-    pub title: String,
-    pub body: String,
-}
-
-impl Issue
-{
-    pub fn new() -> Self
-    {
-        Self {
-            title: String::new(),
-            body: String::new(),
-        }
-    }
-
-    pub fn from_template(issue_template: IssueTemplate) -> Self
-    {
-        Self {
-            title: issue_template.title_template.to_owned(),
-            body: String::new(),
-        }
     }
 }
