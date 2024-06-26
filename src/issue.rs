@@ -6,8 +6,8 @@ use crate::github_client::Issue;
 pub struct IssueTemplate
 {
     pub raw: String,
-    title_template: String,
-    body_template: String,
+    pub title_template: String,
+    pub body_template: String,
 }
 
 impl IssueTemplate
