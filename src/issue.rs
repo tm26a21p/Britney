@@ -15,7 +15,8 @@ impl IssueTemplate
     // Load the template from the given path
     pub fn new(path: &str) -> Self
     {
-        let content = fs::read_to_string(path).expect("Unable to read file");
+        let content =
+            fs::read_to_string(path).expect("Unable to read template file.");
 
         let mut title_template = String::new();
         let mut body_template = String::new();
@@ -24,6 +25,8 @@ impl IssueTemplate
         if let Some((title, body)) = content.split_once("---") {
             title_template = title.trim().to_string();
             body_template = body.trim().to_string();
+        } else {
+            println!("Invalid template formatting. Missing '---' separator");
         }
 
         Self {
