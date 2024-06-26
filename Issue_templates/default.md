@@ -1,5 +1,5 @@
-## {title}
-
+## {title} in {path}
+---
 ### Description
 
 (Describe the issue - 50 words)
@@ -8,5 +8,4 @@
 
 ### Expected Behavior
 
-(Describe what is expected to happen)
-
+(provide a concice description of what is expected to happen)
