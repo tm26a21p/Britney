@@ -18,7 +18,7 @@ impl IssueTemplate
         let content =
             fs::read_to_string(path).expect("Unable to read template file.");
 
-        let mut title_template = String::new();
+        let mut title_template = "New Issue template".to_owned();
         let mut body_template = String::new();
 
         // Simple parsing logic assuming title and body are separated by "---"

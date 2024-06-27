@@ -10,7 +10,7 @@ impl Issue
     pub fn new() -> Self
     {
         Self {
-            title: String::new(),
+            title: "New Issue".to_string(),
             body: String::new(),
         }
     }
