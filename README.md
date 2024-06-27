@@ -1,4 +1,4 @@
-# Britney - GitHub Issues Bulk Creator
+# Britney - Bulk GitHub Issues Creator
 
 Britney is a powerful tool designed to streamline the process of creating multiple GitHub issues. Leveraging AI and customizable templates, Britney allows you to generate bulk issues efficiently, saving time and effort.
 
@@ -7,7 +7,6 @@ Britney is a powerful tool designed to streamline the process of creating multip
 - **Bulk Issue Creation**: Generate multiple issues at once using predefined templates.
 - **AI Integration**: Utilize AI to customize issue content dynamically.
 - **Customizable Templates**: Define your own templates for issue titles and bodies.
-- **Environment Configuration**: Use `.env` files to manage your configuration settings securely.
 
 ## Getting Started
 
@@ -21,10 +20,10 @@ Ensure you have the following installed:
 ### Installation
 
 1. **Clone the repository**:
-   ```sh
-   git clone https://github.com/yourusername/Britney.git
-   cd Britney
-    ```
+```sh
+git clone https://github.com/tm26a21/Britney.git
+cd Britney
+ ```
 
 2. Set up environment variables:
 Create a .env file in the root directory and add your GitHub token and other configuration settings:
