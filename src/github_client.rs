@@ -42,18 +42,20 @@ impl GithubClient
         issue: Issue,
     ) -> octocrab::Result<()>
     {
-        println!(
-            "Creating issue: {:?} in {}, {}",
-            issue.title, self.owner, self.repo
-        );
         let _ = self
             .octocrab
             .issues(&self.owner, &self.repo)
-            .create(issue.title)
+            .create(issue.title.to_owned())
             .body(issue.body)
             .send()
             .await?;
 
+        println!(
+            "Issue {} created in Github repository: {}/{}",
+            issue.title.to_owned(),
+            self.owner,
+            self.repo
+        );
         Ok(())
     }
 
