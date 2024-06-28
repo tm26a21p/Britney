@@ -93,6 +93,7 @@ impl Britney
 
             Adjust the template as needed for each issue. 
             Your answer is only the issue asked.
+            Don't provide the title in markdown format, just the body.
             ",
         )
     }
@@ -196,6 +197,7 @@ impl Britney
         response: String,
     ) -> Issue
     {
+        println!("OG Response: {}", response);
         let mut title = String::new();
         let mut body = String::new();
         let mut is_title = true;
@@ -210,6 +212,7 @@ impl Britney
                 is_title = false;
             } else {
                 body += line;
+                body += "\n";
             }
         }
 
@@ -240,11 +243,9 @@ impl Britney
                 messages.to_owned(),
             ))
             .await?;
-        let mut stdout = stdout();
         let mut response = String::new();
         while let Some(Ok(res)) = stream.next().await {
             if let Some(assistant_message) = res.message {
-                _ = stdout.write_all(assistant_message.content.as_bytes());
                 response += assistant_message.content.as_str();
             }
         }
