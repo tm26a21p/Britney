@@ -1,10 +1,9 @@
-## {title} in {path}
+{title} in {path}
 ---
-### Description
+{body}
+## Description
 
 (Describe the issue - 50 words)
-
-{body}
 
 ### Expected Behavior
 
