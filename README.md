@@ -15,7 +15,7 @@ Britney is a powerful tool designed to streamline the process of creating multip
 Ensure you have the following installed:
 
 - [Rust](https://www.rust-lang.org/tools/install)
-- [ollama](https://ollama.com)
+- [Ollama](https://ollama.com)
 
 ### Installation
 
