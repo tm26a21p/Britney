@@ -226,10 +226,9 @@ impl Britney
         Issue { title, body }
     }
 
-    pub async fn generate_issues_from_file(
+    pub async fn generate_issue_from_file(
         &self,
         path: &str,
-        nb_issues: usize,
     ) -> Result<Issue, Box<dyn std::error::Error>>
     {
         let mut messages = vec![];
@@ -241,7 +240,7 @@ impl Britney
         self.add_message(&mut messages, content, MessageRole::System);
         let content = format!(
             "Produce {} professional Github Issue based on the code provided.",
-            nb_issues
+            1
         );
         self.add_message(&mut messages, content, MessageRole::User);
 
@@ -276,5 +275,23 @@ impl Britney
     {
         self.client.create_issues(issues).await?;
         Ok(())
+    }
+
+    pub async fn generate_issues_from_folder(
+        &self,
+        path: &str,
+    ) -> Result<Vec<Issue>, Box<dyn std::error::Error>>
+    {
+        let mut issues = vec![];
+        let dir = fs::read_dir(path)?;
+        for entry in dir {
+            let entry = entry?;
+            let path = entry.path();
+            let issue = self
+                .generate_issue_from_file(path.to_str().unwrap())
+                .await?;
+            issues.push(issue);
+        }
+        Ok(issues)
     }
 }
